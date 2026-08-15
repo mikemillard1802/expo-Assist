@@ -1,9 +1,9 @@
 streamlit>=1.28
 openai>=1.0.0
+crewai==0.130.0
 crewai-tools
+litellm>=1.60.0,<1.97
 langchain-community
 ddgs
 httpx
-pydantic
-crewai
-litellm
+pydantic>=2.7,<3
