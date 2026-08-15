@@ -27,6 +27,7 @@ local_llm = LLM(
     model="groq/llama-3.3-70b-versatile",
     api_key=_groq_key,
     temperature=0.1,
+    max_retries=3,       # retry on transient errors like rate limits
 )
 
 # --- Lightweight DuckDuckGo search ---
