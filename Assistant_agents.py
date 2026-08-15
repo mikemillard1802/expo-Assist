@@ -22,11 +22,18 @@ if not _groq_key:
         "Set it in Streamlit Cloud → Manage app → Settings → Secrets."
     )
 os.environ["GROQ_API_KEY"] = _groq_key  # crewai/litellm reads this directly
+local_llm = LLM(
+    model="groq/llama-3.3-70b-versatile",
+    api_key=_groq_key,
+    temperature=0.1,
+    max_retries=3,
+)
+
 fast_llm = LLM(
     model="groq/llama-3.1-8b-instant",
     api_key=_groq_key,
     temperature=0.1,
-    max_retries=3,       # retry on transient errors like rate limits
+    max_retries=3,
 )
 
 # --- Lightweight DuckDuckGo search ---
@@ -120,7 +127,7 @@ researcher = Agent(
         "Use search when needed. Prefer 2025–2026 sources. "
         "Bullets only. No meta-commentary."
     ),
-    llm=local_llm,
+    llm=fast_llm,    # was local_llm
     tools=[duckduckgo_search],
     allow_delegation=False,
     verbose=False,
@@ -135,7 +142,7 @@ writer = Agent(
         "Output ONLY the artifact requested (posts, brief, outline, spec section). "
         "No JSON, no planning narration."
     ),
-    llm=local_llm,
+    llm=fast_llm,    # was local_llm
     tools=[],
     allow_delegation=False,
     verbose=False,
@@ -150,7 +157,7 @@ report_writer = Agent(
         "Findings, Risks, Recommendations, Bottom Line. "
         "Ground in research/writer outputs. No fluff."
     ),
-    llm=local_llm,
+    llm=fast_llm,    # was local_llm
     tools=[],
     allow_delegation=False,
     verbose=False,
