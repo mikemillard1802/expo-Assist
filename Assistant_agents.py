@@ -1,14 +1,24 @@
 # Assistant_agents.py
 # Local Orchestrator + specialist pool (Ollama)
 
+import os
+import requests
+import streamlit as st
 from crewai import Agent, LLM
 from crewai.tools import tool
-from langchain_community.tools import DuckDuckGoSearchRun
+
+def _secret(name: str):
+    try:
+        if name in st.secrets:
+            return st.secrets[name]
+    except Exception:
+        pass
+    return os.environ.get(name)
 
 # Cloud LLM (Groq)
-llm = LLM(
+local_llm = LLM(
     model="groq/llama-3.3-70b-versatile",
-    api_key=st.secrets["GROQ_API_KEY"],
+    api_key=_secret("GROQ_API_KEY"),
     temperature=0.1,
 )
 
