@@ -1,0 +1,8 @@
+streamlit>=1.28
+openai>=1.0.0
+crewai
+crewai-tools
+langchain-community
+ddgs
+httpx
+pydantic
