@@ -5,17 +5,67 @@ from crewai import Agent, LLM
 from crewai.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
 
-local_llm = LLM(
-    model="ollama/llama3.2",  # match: ollama list
-    base_url="http://localhost:11434",
+# Cloud LLM (Groq)
+llm = LLM(
+    model="groq/llama-3.3-70b-versatile",
+    api_key=st.secrets["GROQ_API_KEY"],
     temperature=0.1,
-    timeout=600,
 )
 
+# --- Lightweight DuckDuckGo search ---
 @tool("DuckDuckGo Search")
 def duckduckgo_search(query: str) -> str:
-    """Search the web for recent statistics, trends, and sources."""
-    return DuckDuckGoSearchRun().run(query)
+    """Search the web for real-time market signals."""
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        params = {"q": query, "kl": "us-en"}
+        resp = requests.get(
+            "https://html.duckduckgo.com/html/",
+            params=params,
+            headers=headers,
+            timeout=10
+        )
+        if resp.status_code != 200:
+            return f"Search unavailable (HTTP {resp.status_code}). Use general knowledge."
+
+        from html.parser import HTMLParser
+
+        class SnippetParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.results = []
+                self._capture = False
+                self._current = []
+
+            def handle_starttag(self, tag, attrs):
+                attrs_dict = dict(attrs)
+                if tag == "a" and "result__snippet" in attrs_dict.get("class", ""):
+                    self._capture = True
+                    self._current = []
+
+            def handle_endtag(self, tag):
+                if self._capture and tag == "a":
+                    self.results.append("".join(self._current).strip())
+                    self._capture = False
+
+            def handle_data(self, data):
+                if self._capture:
+                    self._current.append(data)
+
+        parser = SnippetParser()
+        parser.feed(resp.text)
+        snippets = parser.results[:10]
+
+        if not snippets:
+            return "No results found. Use your general knowledge of 2026 market conditions."
+
+        return "\n".join(f"- {s}" for s in snippets)
+
+    except requests.Timeout:
+        return "Search timed out. Use your general knowledge of 2026 market conditions."
+    except Exception as e:
+        return f"Search error: {str(e)}. Use your general knowledge of 2026 market conditions."
+
 
 # ----- Orchestrator (plans the swarm; does not do all the work alone) -----
 orchestrator = Agent(
