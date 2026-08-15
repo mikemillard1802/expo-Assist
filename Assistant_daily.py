@@ -95,7 +95,78 @@ def run_execution(goal: str, plan: str) -> str:
         memory=False,
     )
     return str(exec_crew.kickoff(inputs={"goal": goal, "plan": plan}))
+def deep_research(goal: str, auto_confirm: bool = True) -> str:
+    """
+    Non-interactive entry point for the Streamlit app.
+    Runs the full plan -> execute pipeline without prompting for input.
+    """
+    plan = run_planner(goal)
 
+    out_path = f"{daily_folder}/swarm_plan_{datetime.now().strftime('%H-%M-%S')}.md"
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(f"# Swarm Plan\n\nGoal: {goal}\n\n{plan}\n")
+
+    if not auto_confirm:
+        return plan  # planning-only mode, if you ever want it
+
+    result = run_execution(goal, plan)
+
+    out_path = f"{daily_folder}/assistant_output_{datetime.now().strftime('%H-%M-%S')}.md"
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(f"# Assistant Output\n\nGoal: {goal}\n\n## Plan\n{plan}\n\n## Result\n{result}\n")
+
+    return result
+
+
+def quick_search(query: str) -> str:
+    """
+    Lightweight DuckDuckGo search for the Streamlit 'search:' box —
+    no crew, no LLM, just raw snippets.
+    """
+    import requests
+    from html.parser import HTMLParser
+
+    headers = {"User-Agent": "Mozilla/5.0"}
+    params = {"q": query, "kl": "us-en"}
+    resp = requests.get(
+        "https://html.duckduckgo.com/html/",
+        params=params,
+        headers=headers,
+        timeout=10,
+    )
+    if resp.status_code != 200:
+        return f"Search unavailable (HTTP {resp.status_code})."
+
+    class SnippetParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.results = []
+            self._capture = False
+            self._current = []
+
+        def handle_starttag(self, tag, attrs):
+            attrs_dict = dict(attrs)
+            if tag == "a" and "result__snippet" in attrs_dict.get("class", ""):
+                self._capture = True
+                self._current = []
+
+        def handle_endtag(self, tag):
+            if self._capture and tag == "a":
+                self.results.append("".join(self._current).strip())
+                self._capture = False
+
+        def handle_data(self, data):
+            if self._capture:
+                self._current.append(data)
+
+    parser = SnippetParser()
+    parser.feed(resp.text)
+    snippets = parser.results[:10]
+
+    if not snippets:
+        return "No results found."
+
+    return "\n".join(f"- {s}" for s in snippets)
 if __name__ == "__main__":
     print("=" * 60)
     print("LOCAL ORCHESTRATOR ASSISTANT (Ollama)")
