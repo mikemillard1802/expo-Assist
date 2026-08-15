@@ -1,5 +1,5 @@
 # Assistant_agents.py
-# Local Orchestrator + specialist pool (Ollama)
+# Local Orchestrator + specialist pool
 
 import os
 import requests
@@ -15,10 +15,17 @@ def _secret(name: str):
         pass
     return os.environ.get(name)
 
-# Cloud LLM (Groq)
+_groq_key = _secret("GROQ_API_KEY")
+if not _groq_key:
+    raise RuntimeError(
+        "GROQ_API_KEY not found in st.secrets or environment. "
+        "Set it in Streamlit Cloud → Manage app → Settings → Secrets."
+    )
+os.environ["GROQ_API_KEY"] = _groq_key  # crewai/litellm reads this directly
+
 local_llm = LLM(
     model="groq/llama-3.3-70b-versatile",
-    api_key=_secret("GROQ_API_KEY"),
+    api_key=_groq_key,
     temperature=0.1,
 )
 
